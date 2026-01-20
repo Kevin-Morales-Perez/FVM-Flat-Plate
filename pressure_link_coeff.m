@@ -1,0 +1,160 @@
+function [ap_W,ap_N,ap_E,ap_S,ap_P,suP] = pressure_link_coeff(nx,ny,...
+    nx_upstr,nx_dwnstr,dxVec,dyVec,u_face,v_face,aP,aPv,ap_W,ap_N,ap_E,...
+    ap_S,ap_P,suP)
+
+%Pressure correction coeffitients
+%pressure correction cdyVec(i)oeffitients ap_W,ap_N,ap_E,ap_S,ap_P
+
+    %Interior cells
+    for i=2:ny-1
+        for j=2:nx-1
+            
+            %Consider cells near the symetric BC
+            if (i==ny-1)&&((j<=nx_upstr) || j>(nx-nx_dwnstr))
+                ap_S(i,j)=(dxVec(j)^2)*0.5*(1/aP(i,j)  + 1/aPv(j));
+
+            else
+                ap_S(i,j)=(dxVec(j)^2)*0.5*(1/aP(i,j)  + 1/aP(i+1,j));
+            end
+
+            %Pressure correction coeffitients 
+            ap_W(i,j)=(dyVec(i)^2)*0.5*(1/aP(i,j-1)  + 1/aP(i,j));
+            ap_N(i,j)=(dxVec(j)^2)*0.5*(1/aP(i-1,j)  + 1/aP(i,j));
+            ap_E(i,j)=(dyVec(i)^2)*0.5*(1/aP(i,j)  + 1/aP(i,j+1));
+            
+            ap_P(i,j)= ap_W(i,j) + ap_N(i,j) + ap_E(i,j) + ap_S(i,j);
+    
+            %Source for pressure correction equation
+            suP(i,j)=-(dyVec(i)*(-u_face(i,j) +u_face(i,j+1)) + ... 
+                dxVec(j)*(-v_face(i+1,j) + v_face(i,j)));
+    
+        end
+    end
+    
+    %Edges
+    
+    % West
+    j=1;
+    for i =2:ny-1
+    
+        %Pressure correction coeffitients 
+        ap_N(i,j)=(dxVec(j)^2)*0.5*(1/aP(i-1,j)  + 1/aP(i,j));
+        ap_E(i,j)=(dyVec(i)^2)*0.5*(1/aP(i,j)  + 1/aP(i,j+1));
+        ap_S(i,j)=(dxVec(j)^2)*0.5*(1/aP(i,j)  + 1/aP(i+1,j));
+        ap_P(i,j)= ap_N(i,j) + ap_E(i,j) + ap_S(i,j);
+    
+        %Source for pressure correction equation
+        suP(i,j)=-(dyVec(i)*(-u_face(i,j) +u_face(i,j+1)) + ... 
+            dxVec(j)*(-v_face(i+1,j) + v_face(i,j)));
+    
+    end
+    
+    % North
+    i=1;
+    for j=2:nx-1
+    
+        %Pressure correction coeffitients 
+        ap_W(i,j)=(dyVec(i)^2)*0.5*(1/aP(i,j-1)  + 1/aP(i,j));
+        ap_E(i,j)=(dyVec(i)^2)*0.5*(1/aP(i,j)  + 1/aP(i,j+1));
+        ap_S(i,j)=(dxVec(j)^2)*0.5*(1/aP(i,j)  + 1/aP(i+1,j));
+        ap_P(i,j)= ap_W(i,j) + ap_E(i,j) + ap_S(i,j);
+    
+        %Source for pressure correction equation
+        suP(i,j)=-(dyVec(i)*(-u_face(i,j) +u_face(i,j+1)) + ... 
+            dxVec(j)*(-v_face(i+1,j) + v_face(i,j)));
+    end
+    
+    %east
+    
+    j=nx;
+    for i=2:ny-1
+    
+        %Pressure correction coeffitients 
+        ap_W(i,j)=(dyVec(i)^2)*0.5*(1/aP(i,j-1));
+        ap_N(i,j)=(dxVec(j)^2)*0.5*(1/aP(i-1,j)  + 1/aP(i,j));
+        ap_S(i,j)=(dxVec(j)^2)*0.5*(1/aP(i,j)  + 1/aP(i+1,j));
+        ap_P(i,j)= ap_W(i,j) + ap_N(i,j) + ap_S(i,j) + ... 
+            (dyVec(i)^2)*(1/aP(i,j));
+    
+        %Source for pressure correction equation
+        suP(i,j)=-(dyVec(i)*(-u_face(i,j) +u_face(i,j+1)) + ... 
+            dxVec(j)*(-v_face(i+1,j) + v_face(i,j)));
+    end
+    
+    %south (use here aPV from the symetric boundary condition)
+    
+    i=ny;
+    for j=2:nx-1
+
+        if (j<=nx_upstr) || j>(nx-nx_dwnstr)
+            ap_N(i,j)=(dxVec(j)^2)*0.5*(1/aP(i-1,j)  + 1/aPv(j));
+        else
+            ap_N(i,j)=(dxVec(j)^2)*0.5*(1/aP(i-1,j)  + 1/aP(i,j));
+        end
+    
+        %Pressure correction coeffitients 
+        ap_W(i,j)=(dyVec(i)^2)*0.5*(1/aP(i,j-1)  + 1/aP(i,j));
+        ap_E(i,j)=(dyVec(i)^2)*0.5*(1/aP(i,j)  + 1/aP(i,j+1));
+        ap_P(i,j)= ap_W(i,j) + ap_N(i,j) + ap_E(i,j);
+    
+        %Source for pressure correction equation
+        suP(i,j)=-(dyVec(i)*(-u_face(i,j) +u_face(i,j+1)) + ... 
+            dxVec(j)*(-v_face(i+1,j) + v_face(i,j)));
+    end
+    
+    %Corners 
+    
+    % North-West
+    i=1;
+    j=1;
+    
+    %Pressure correction coeffitients 
+    ap_E(i,j)=(dyVec(i)^2)*0.5*(1/aP(i,j)  + 1/aP(i,j+1));
+    ap_S(i,j)=(dxVec(j)^2)*0.5*(1/aP(i,j)  + 1/aP(i+1,j));
+    ap_P(i,j)=ap_E(i,j) + ap_S(i,j);
+    
+    %Source for pressure correction equation
+    suP(i,j)=-(dyVec(i)*(-u_face(i,j) +u_face(i,j+1)) + ... 
+        dxVec(j)*(-v_face(i+1,j) + v_face(i,j))) ;
+    
+    % North-East
+    i=1;
+    j=nx;
+    
+    %Pressure correction coeffitients 
+    ap_W(i,j)=(dyVec(i)^2)*0.5*(1/aP(i,j-1));
+    ap_S(i,j)=(dxVec(j)^2)*0.5*(1/aP(i,j)  + 1/aP(i+1,j));
+    ap_P(i,j)= ap_W(i,j) + ap_S(i,j) +(dyVec(i)^2)*(1/aP(i,j));
+    
+    %Source for pressure correction equation
+    suP(i,j)=-(dyVec(i)*(-u_face(i,j) +u_face(i,j+1)) + ...
+        dxVec(j)*(-v_face(i+1,j) + v_face(i,j)));
+    
+    % South-East  (use here aPV from the symetric boundary condition)
+    i=ny;
+    j=nx;
+    
+    %Pressure correction coeffitients 
+    ap_W(i,j)=(dyVec(i)^2)*0.5*(1/aP(i,j-1));
+    ap_N(i,j)=(dxVec(j)^2)*0.5*(1/aP(i-1,j)  + 1/aPv(j));
+    ap_P(i,j)= ap_W(i,j) + ap_N(i,j) +(dyVec(i)^2)*(1/aP(i,j));
+    
+    %Source for pressure correction equation
+    suP(i,j)=-(dyVec(i)*(-u_face(i,j) +u_face(i,j+1)) + ... 
+        dxVec(j)*(-v_face(i+1,j) + v_face(i,j)));
+    
+    
+    % South-West (use here aPV from the symetric boundary condition)
+    i=ny;
+    j=1;
+    
+    %Pressure correction coeffitients 
+    ap_N(i,j)=(dxVec(j)^2)*0.5*(1/aP(i-1,j)  + 1/aPv(j));
+    ap_E(i,j)=(dyVec(i)^2)*0.5*(1/aP(i,j)  + 1/aP(i,j+1));
+    ap_P(i,j)=ap_N(i,j) + ap_E(i,j);
+    
+    %Source for pressure correction equation
+    suP(i,j)=-(dyVec(i)*(-u_face(i,j) +u_face(i,j+1)) + ... 
+        dxVec(j)*(-v_face(i+1,j) + v_face(i,j)));
+    
+end
